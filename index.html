@@ -1,6 +1,6 @@
 <!-- Gary Ang | Ming | playgrd -->
 <!-- three.js port of Nature of Code Chapter 1-->
-<!-- Sphere bounce and edge checking -->
+<!-- Multiple forces -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -28,6 +28,7 @@
             camera.position.z = 125;
             camera.position.x = 50;
             camera.position.y = 50;
+
             var renderer = new THREE.WebGLRenderer( { antialias: true } );
             renderer.setPixelRatio( window.devicePixelRatio );
             renderer.setSize( window.innerWidth, window.innerHeight );
@@ -70,17 +71,21 @@
 
             var prevFog = true;
 
+            var wind = new THREE.Vector3(1,0,0);
+            var gravity = new THREE.Vector3(0,10,0);
+
 
             var render = function () {
 
                 requestAnimationFrame( render );
-                orbit.update();
                 mover.display();
+                mover.applyForce(wind);
+                mover.applyForce(gravity);
                 mover.update();
                 mover.checkEdges();
-                group.rotation.x += 0.01;
-                group.rotation.y += 0.01;
-                group.rotation.z += 0.01;
+                // group.rotation.x += 0.002;
+                // group.rotation.y += 0.002;
+                // group.rotation.z += 0.002;
 
                 renderer.render( scene, camera );
 
@@ -103,6 +108,7 @@
                 this.acceleration = new THREE.Vector3();
                 this.max = new THREE.Vector3(100,100,100);
                 this.min = new THREE.Vector3(-100,-100,-100);
+                this.mass = 10;
 
                 var geometry = new THREE.SphereGeometry(2,10,10);
                 var material = new THREE.MeshToonMaterial({ color: 0x624763, opacity:0.5, transparent:true, wireframe:true, emissive: 0x624763,emissiveIntensity:1} );
@@ -121,11 +127,19 @@
                     this.acceleration.z = 0.001;                    
                 }
 
+                this.applyForce = function(force){
+                    var f = force.divideScalar(this.mass);
+                    this.acceleration.add(f);
+                }
 
-                this.update = function() { 
+
+                this.update = function() {
+                    
                     this.velocity.add(this.acceleration);
                     this.velocity.clamp(this.min, this.max);
                     this.position.add(this.velocity);
+                    this.acceleration.multiplyScalar(0);
+
                 }
 
                 this.display = function(){
@@ -162,7 +176,6 @@
                         this.velocity.z *= -1;
                     }                         
                 }
-
 
             }
 
