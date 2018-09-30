@@ -1,11 +1,12 @@
 <!-- Gary Ang | Ming | playgrd -->
-<!-- three.js port of Nature of Code Chapter 0-->
-<!-- Sphere moving based on Perlin noise -->
+<!-- three.js port of Nature of Code Chapter 1-->
+<!-- Sphere bounce and edge checking -->
+
 <!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>Nature of Code port to three.js</title>
+        <title>Nature of Code port in three.js</title>
         <style>
         </style>
         <script type="text/javascript" src="./libs/three.js"></script>
@@ -18,16 +19,15 @@
 
     <div id='svg'></div>
         <script>
-            // this allows us access to functions in the p5 library outside of setup and draw
+
             var p5 = new p5();
 
             var scene = new THREE.Scene();
-
-            // Alternatives - a perspective and orthographic camera
-            var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
-            // var camera = new THREE.OrthographicCamera( 1,50,1,50,0.1, 2000 );
-            camera.position.z = 100;
-
+            var camera = new THREE.PerspectiveCamera( 100, window.innerWidth / window.innerHeight, 0.1, 1000 );
+            // var camera = new THREE.OrthographicCamera( 0,50,0,50, 0.1,1000 );
+            camera.position.z = 125;
+            camera.position.x = 50;
+            camera.position.y = 50;
             var renderer = new THREE.WebGLRenderer( { antialias: true } );
             renderer.setPixelRatio( window.devicePixelRatio );
             renderer.setSize( window.innerWidth, window.innerHeight );
@@ -37,11 +37,11 @@
             var orbit = new THREE.OrbitControls( camera, renderer.domElement );
             orbit.enableZoom = false;
 
-            var ambientLight  = new THREE.AmbientLight( '#FFFFFF' ),
+            var ambientLight  = new THREE.AmbientLight( '#00FFFF' ),
                 hemiLight     = new THREE.HemisphereLight('#D63AF9', '#2F1847', 0 ),
                 light         = new THREE.PointLight( '#D63AF9', 1, 100 );
 
-            ambientLight.position.set( 0, 0, 0 );    
+            ambientLight.position.set( 0, 0, 0 );
             hemiLight.position.set( 0, 0, 0 );
             light.position.set( 0, 0, 10 );
 
@@ -51,22 +51,36 @@
 
             var group = new THREE.Group();
 
-            walker = new Walker();
-            walker.display();
+            // Box added to show the boundaries
+            // Box x, y and z positions indicate the centre, not the corner
+            var geometry = new THREE.BoxGeometry(50,50,50);
+            // geometry.center();
+            var material = new THREE.MeshToonMaterial({ color: 0xFFB4E0, opacity:0.6, transparent:true, wireframe:true, emissive: 0xFFB4E0,emissiveIntensity:0.01} );
+            var box = new THREE.Mesh(geometry, material);
+            box.position.x = 25;
+            box.position.y = 25;
+            box.position.z = 25;
+            group.add(box);
+
+            mover = new Mover();
+            mover.display();
+            mover.initialise();
 
             scene.add( group );
 
             var prevFog = true;
 
+
             var render = function () {
 
                 requestAnimationFrame( render );
-                walker.display();
-                walker.walk();
-
-                // group.rotation.x += 0.002;
-                // group.rotation.y += 0.002;
-                // group.rotation.z += 0.002;
+                orbit.update();
+                mover.display();
+                mover.update();
+                mover.checkEdges();
+                group.rotation.x += 0.01;
+                group.rotation.y += 0.01;
+                group.rotation.z += 0.01;
 
                 renderer.render( scene, camera );
 
@@ -83,14 +97,36 @@
 
             render();
 
-            function Walker() {
-                this.position = new THREE.Vector3(0,0,0);
-                this.noff = new THREE.Vector3(Math.random(), Math.random(), Math.random());
+            function Mover() {
+                this.position = new THREE.Vector3();
+                this.velocity = new THREE.Vector3();
+                this.acceleration = new THREE.Vector3();
+                this.max = new THREE.Vector3(100,100,100);
+                this.min = new THREE.Vector3(-100,-100,-100);
 
-                var geometry = new THREE.SphereGeometry(3,10,10);
-                var material = new THREE.MeshToonMaterial({ color: 0x624763, opacity:0.5, transparent:true, wireframe:true, emissive: 0x624763,emissiveIntensity:0.1} );
+                var geometry = new THREE.SphereGeometry(2,10,10);
+                var material = new THREE.MeshToonMaterial({ color: 0x624763, opacity:0.5, transparent:true, wireframe:true, emissive: 0x624763,emissiveIntensity:1} );
                 var sphere = new THREE.Mesh(geometry, material);
                 group.add(sphere);
+
+                this.initialise = function() {
+                    this.position.x = 25;
+                    this.position.y = 25;
+                    this.position.z = 25;
+                    this.velocity.x = 0.5;
+                    this.velocity.y = 0.3;
+                    this.velocity.z = 0.03;
+                    this.acceleration.x = 0.01;
+                    this.acceleration.y = 0.01; 
+                    this.acceleration.z = 0.001;                    
+                }
+
+
+                this.update = function() { 
+                    this.velocity.add(this.acceleration);
+                    this.velocity.clamp(this.min, this.max);
+                    this.position.add(this.velocity);
+                }
 
                 this.display = function(){
                     sphere.position.x = this.position.x;
@@ -98,18 +134,36 @@
                     sphere.position.z = this.position.z;
                 }
 
-                this.walk = function(){
-                    var noisex = p5.noise(this.noff.x);
-                    var noisey = p5.noise(this.noff.y);
-                    var noisez = p5.noise(this.noff.z);
-                    this.position.x = THREE.Math.mapLinear(noisex,0,1,-50,50);
-                    this.position.y = THREE.Math.mapLinear(noisey,0,1,-50,50);
-                    this.position.z = THREE.Math.mapLinear(noisez,0,1,-50,50);
-                    this.noff.add(new THREE.Vector3(0.01,0.01,0.01));
-                    // console.log(this.position.x,this.position.y);
-                    // console.log(p5.noise(0.01));
-                   
+                this.checkEdges = function() {
+
+                    if (this.position.x > 50){
+                        this.position.x = 50;
+                        this.velocity.x *= -1;
+                    }
+                    else if (this.position.x < 0){
+                        this.position.x = 0;
+                        this.velocity.x *= -1;
+                    }
+
+                    if (this.position.y > 50){
+                        this.position.y = 50;
+                        this.velocity.y *= -1;
+                    }
+                    else if (this.position.y < 0){
+                        this.position.y = 0;
+                        this.velocity.y *= -1;
+                    }
+                    if (this.position.z > 50){
+                        this.position.z = 50;
+                        this.velocity.z *= -1;
+                    }
+                    else if (this.position.z < 0){
+                        this.position.z = 0;
+                        this.velocity.z *= -1;
+                    }                         
                 }
+
+
             }
 
 
