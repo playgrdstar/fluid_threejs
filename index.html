@@ -1,0 +1,118 @@
+<!-- Gary Ang | Ming | playgrd -->
+<!-- three.js port of Nature of Code Chapter 0-->
+<!-- Sphere moving based on Perlin noise -->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Nature of Code port to three.js</title>
+        <style>
+        </style>
+        <script type="text/javascript" src="./libs/three.js"></script>
+        <script type="text/javascript" src="./libs/OrbitControls.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.2.8/d3.min.js" type="text/JavaScript"></script>
+        <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.2/p5.min.js"></script>
+        <script type="text/javascript" src="https://cdn.rawgit.com/josephg/noisejs/master/perlin.js"></script>
+    </head>
+    <body>
+
+    <div id='svg'></div>
+        <script>
+            // this allows us access to functions in the p5 library outside of setup and draw
+            var p5 = new p5();
+
+            var scene = new THREE.Scene();
+
+            // Alternatives - a perspective and orthographic camera
+            var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
+            // var camera = new THREE.OrthographicCamera( 1,50,1,50,0.1, 2000 );
+            camera.position.z = 100;
+
+            var renderer = new THREE.WebGLRenderer( { antialias: true } );
+            renderer.setPixelRatio( window.devicePixelRatio );
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            renderer.setClearColor( 0xF9B3D1, 1 );
+            document.body.appendChild( renderer.domElement );
+
+            var orbit = new THREE.OrbitControls( camera, renderer.domElement );
+            orbit.enableZoom = false;
+
+            var ambientLight  = new THREE.AmbientLight( '#FFFFFF' ),
+                hemiLight     = new THREE.HemisphereLight('#D63AF9', '#2F1847', 0 ),
+                light         = new THREE.PointLight( '#D63AF9', 1, 100 );
+
+            ambientLight.position.set( 0, 0, 0 );    
+            hemiLight.position.set( 0, 0, 0 );
+            light.position.set( 0, 0, 10 );
+
+            scene.add( ambientLight ); 
+            scene.add( hemiLight );
+            scene.add( light );
+
+            var group = new THREE.Group();
+
+            walker = new Walker();
+            walker.display();
+
+            scene.add( group );
+
+            var prevFog = true;
+
+            var render = function () {
+
+                requestAnimationFrame( render );
+                walker.display();
+                walker.walk();
+
+                // group.rotation.x += 0.002;
+                // group.rotation.y += 0.002;
+                // group.rotation.z += 0.002;
+
+                renderer.render( scene, camera );
+
+            };
+
+            window.addEventListener( 'resize', function () {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                
+
+                renderer.setSize( window.innerWidth, window.innerHeight );
+
+            }, false );
+
+            render();
+
+            function Walker() {
+                this.position = new THREE.Vector3(0,0,0);
+                this.noff = new THREE.Vector3(Math.random(), Math.random(), Math.random());
+
+                var geometry = new THREE.SphereGeometry(3,10,10);
+                var material = new THREE.MeshToonMaterial({ color: 0x624763, opacity:0.5, transparent:true, wireframe:true, emissive: 0x624763,emissiveIntensity:0.1} );
+                var sphere = new THREE.Mesh(geometry, material);
+                group.add(sphere);
+
+                this.display = function(){
+                    sphere.position.x = this.position.x;
+                    sphere.position.y = this.position.y;
+                    sphere.position.z = this.position.z;
+                }
+
+                this.walk = function(){
+                    var noisex = p5.noise(this.noff.x);
+                    var noisey = p5.noise(this.noff.y);
+                    var noisez = p5.noise(this.noff.z);
+                    this.position.x = THREE.Math.mapLinear(noisex,0,1,-50,50);
+                    this.position.y = THREE.Math.mapLinear(noisey,0,1,-50,50);
+                    this.position.z = THREE.Math.mapLinear(noisez,0,1,-50,50);
+                    this.noff.add(new THREE.Vector3(0.01,0.01,0.01));
+                    // console.log(this.position.x,this.position.y);
+                    // console.log(p5.noise(0.01));
+                   
+                }
+            }
+
+
+        </script>
+    </body>
+</html>
